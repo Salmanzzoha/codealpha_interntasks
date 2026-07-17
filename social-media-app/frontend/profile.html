@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Profile — Buzz</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="inner">
+    <a href="index.html" class="brand">🐝 Buzz</a>
+    <div class="nav-links" id="auth-links"></div>
+  </div>
+</nav>
+
+<main class="page container">
+  <div id="alert-box"></div>
+  <div id="profile-container"></div>
+  <div id="posts-container"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/post.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  const profileContainer = document.getElementById("profile-container");
+  const postsContainer = document.getElementById("posts-container");
+  const username = new URLSearchParams(window.location.search).get("username");
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  async function loadProfile() {
+    // Make sure window.currentUser is settled before rendering posts (avoids
+    // a race with nav.js over who owns each post / whether to show delete).
+    try {
+      window.currentUser = await api.get("/auth/me");
+    } catch {
+      window.currentUser = null;
+    }
+
+    if (!username) {
+      showAlert("No profile specified.");
+      return;
+    }
+
+    try {
+      const profile = await api.get(`/users/${encodeURIComponent(username)}`);
+
+      profileContainer.innerHTML = `
+        <div class="profile-header">
+          <img class="avatar" src="${profile.avatar_url}" alt="${escapeHtml(profile.username)}" />
+          <h2>${escapeHtml(profile.name)}</h2>
+          <span class="post-username">@${escapeHtml(profile.username)}</span>
+          ${profile.bio ? `<p class="profile-bio">${escapeHtml(profile.bio)}</p>` : ""}
+          <div class="profile-stats">
+            <div><strong>${profile.postCount}</strong><span>Posts</span></div>
+            <div><strong>${profile.followerCount}</strong><span>Followers</span></div>
+            <div><strong>${profile.followingCount}</strong><span>Following</span></div>
+          </div>
+          ${
+            profile.isOwnProfile
+              ? `<button id="edit-profile-btn" class="secondary">Edit Profile</button>`
+              : window.currentUser
+              ? `<button id="follow-btn" class="${profile.isFollowedByViewer ? "secondary" : ""}">${
+                  profile.isFollowedByViewer ? "Unfollow" : "Follow"
+                }</button>`
+              : `<a href="login.html" class="btn">Log in to follow</a>`
+          }
+          <div id="edit-form-container"></div>
+        </div>
+      `;
+
+      if (profile.isOwnProfile) {
+        document.getElementById("edit-profile-btn").addEventListener("click", () => {
+          renderEditForm(profile);
+        });
+      }
+
+      const followBtn = document.getElementById("follow-btn");
+      if (followBtn) {
+        followBtn.addEventListener("click", async () => {
+          try {
+            const result = await api.post(`/users/${encodeURIComponent(username)}/follow`);
+            followBtn.textContent = result.following ? "Unfollow" : "Follow";
+            followBtn.classList.toggle("secondary", result.following);
+            profileContainer.querySelector(".profile-stats div:nth-child(2) strong").textContent =
+              result.followerCount;
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      }
+
+      if (profile.posts.length === 0) {
+        postsContainer.innerHTML = `<div class="empty-state">No posts yet.</div>`;
+      } else {
+        postsContainer.innerHTML = profile.posts.map(renderPostCard).join("");
+        wirePostCards(postsContainer);
+      }
+    } catch (err) {
+      showAlert(err.message);
+    }
+  }
+
+  function renderEditForm(profile) {
+    const container = document.getElementById("edit-form-container");
+    container.innerHTML = `
+      <div class="form-group" style="text-align:left; margin-top:16px;">
+        <label for="edit-name">Name</label>
+        <input type="text" id="edit-name" value="${escapeHtml(profile.name)}" />
+      </div>
+      <div class="form-group" style="text-align:left;">
+        <label for="edit-bio">Bio</label>
+        <textarea id="edit-bio">${escapeHtml(profile.bio)}</textarea>
+      </div>
+      <button id="save-profile-btn">Save</button>
+    `;
+    document.getElementById("save-profile-btn").addEventListener("click", async () => {
+      try {
+        await api.put("/users/me", {
+          name: document.getElementById("edit-name").value.trim(),
+          bio: document.getElementById("edit-bio").value.trim(),
+        });
+        loadProfile();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
+  loadProfile();
+</script>
+</body>
+</html>

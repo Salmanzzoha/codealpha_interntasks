@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Cart — ShopEase</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">🛒 ShopEase</a>
+    <div class="nav-links">
+      <a href="cart.html">Cart <span class="cart-badge" id="cart-count"></span></a>
+      <div id="auth-links" class="nav-links"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="page container">
+  <h1 class="page-title">Your Cart</h1>
+  <div id="alert-box"></div>
+  <div id="cart-container"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  const cartContainer = document.getElementById("cart-container");
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  async function loadCart() {
+    try {
+      const cart = await api.get("/cart");
+
+      if (cart.items.length === 0) {
+        cartContainer.innerHTML = `
+          <div class="empty-state">
+            Your cart is empty.<br /><br />
+            <a href="index.html" class="btn">Browse Products</a>
+          </div>`;
+        return;
+      }
+
+      cartContainer.innerHTML =
+        cart.items
+          .map(
+            (item) => `
+        <div class="cart-item" data-cart-item-id="${item.cart_item_id}">
+          <img src="${item.image_url || "https://via.placeholder.com/70"}" alt="${escapeHtml(item.name)}" />
+          <div>
+            <strong>${escapeHtml(item.name)}</strong><br />
+            <span class="price">$${item.price.toFixed(2)}</span>
+          </div>
+          <div class="qty-controls">
+            <input type="number" min="1" max="${item.stock}" value="${item.quantity}" class="qty-input" />
+            <button class="secondary update-btn">Update</button>
+          </div>
+          <span>$${(item.price * item.quantity).toFixed(2)}</span>
+          <button class="danger remove-btn">Remove</button>
+        </div>
+      `
+          )
+          .join("") +
+        `
+        <div class="cart-summary">
+          <div class="total-row"><span>Total</span><span>$${cart.total.toFixed(2)}</span></div>
+          <a href="checkout.html" class="btn" style="display:block; text-align:center;">Proceed to Checkout</a>
+        </div>
+      `;
+
+      document.querySelectorAll(".update-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          const row = e.target.closest(".cart-item");
+          const cartItemId = row.dataset.cartItemId;
+          const qty = parseInt(row.querySelector(".qty-input").value, 10);
+          try {
+            await api.put(`/cart/${cartItemId}`, { quantity: qty });
+            loadCart();
+            updateCartBadge();
+          } catch (err) {
+            showAlert(err.message);
+          }
+        });
+      });
+
+      document.querySelectorAll(".remove-btn").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          const row = e.target.closest(".cart-item");
+          const cartItemId = row.dataset.cartItemId;
+          try {
+            await api.del(`/cart/${cartItemId}`);
+            loadCart();
+            updateCartBadge();
+          } catch (err) {
+            showAlert(err.message);
+          }
+        });
+      });
+    } catch (err) {
+      if (err.message.includes("logged in")) {
+        window.location.href = "login.html";
+        return;
+      }
+      showAlert(err.message);
+    }
+  }
+
+  loadCart();
+</script>
+</body>
+</html>

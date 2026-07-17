@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Buzz — Mini Social Media</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="inner">
+    <a href="index.html" class="brand">🐝 Buzz</a>
+    <div class="nav-links" id="auth-links"></div>
+  </div>
+</nav>
+
+<main class="page container">
+  <div id="composer-container"></div>
+
+  <div class="feed-tabs" id="feed-tabs" style="display:none;">
+    <button data-feed="all" class="active">For You</button>
+    <button data-feed="following">Following</button>
+  </div>
+
+  <div id="alert-box"></div>
+  <div id="feed-container"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/post.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  const feedContainer = document.getElementById("feed-container");
+  const composerContainer = document.getElementById("composer-container");
+  const feedTabs = document.getElementById("feed-tabs");
+  let currentFeed = "all";
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  async function renderComposer() {
+    try {
+      window.currentUser = await api.get("/auth/me");
+      composerContainer.innerHTML = `
+        <div class="composer">
+          <textarea id="post-content" placeholder="What's on your mind?" maxlength="1000"></textarea>
+          <div class="composer-footer">
+            <button id="post-submit-btn">Post</button>
+          </div>
+        </div>
+      `;
+      document.getElementById("post-submit-btn").addEventListener("click", async () => {
+        const content = document.getElementById("post-content").value.trim();
+        if (!content) return;
+        try {
+          await api.post("/posts", { content });
+          document.getElementById("post-content").value = "";
+          loadFeed();
+        } catch (err) {
+          showAlert(err.message);
+        }
+      });
+      feedTabs.style.display = "flex";
+    } catch {
+      window.currentUser = null;
+      composerContainer.innerHTML = "";
+      feedTabs.style.display = "none";
+    }
+  }
+
+  async function loadFeed() {
+    try {
+      const query = currentFeed === "following" ? "?feed=following" : "";
+      const posts = await api.get(`/posts${query}`);
+      alertBox.innerHTML = "";
+      if (posts.length === 0) {
+        feedContainer.innerHTML = `<div class="empty-state">No posts yet. ${
+          currentFeed === "following" ? "Follow people to see their posts here." : "Be the first to post!"
+        }</div>`;
+        return;
+      }
+      feedContainer.innerHTML = posts.map(renderPostCard).join("");
+      wirePostCards(feedContainer);
+    } catch (err) {
+      showAlert(err.message);
+    }
+  }
+
+  feedTabs.addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    currentFeed = e.target.dataset.feed;
+    feedTabs.querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+    e.target.classList.add("active");
+    loadFeed();
+  });
+
+  (async () => {
+    await renderComposer();
+    await loadFeed();
+  })();
+</script>
+</body>
+</html>

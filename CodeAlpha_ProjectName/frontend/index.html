@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ShopEase — Simple E-commerce Store</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">🛒 ShopEase</a>
+    <form class="search-bar" id="search-form">
+      <input type="text" id="search-input" placeholder="Search products..." />
+      <button type="submit">Search</button>
+    </form>
+    <div class="nav-links">
+      <a href="cart.html">Cart <span class="cart-badge" id="cart-count"></span></a>
+      <div id="auth-links" class="nav-links"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="page container">
+  <h1 class="page-title">All Products</h1>
+
+  <div class="filters">
+    <select id="category-filter">
+      <option value="">All Categories</option>
+    </select>
+  </div>
+
+  <div id="alert-box"></div>
+  <div id="product-grid" class="product-grid"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const grid = document.getElementById("product-grid");
+  const alertBox = document.getElementById("alert-box");
+  const categoryFilter = document.getElementById("category-filter");
+  const searchForm = document.getElementById("search-form");
+  const searchInput = document.getElementById("search-input");
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  function renderProducts(products) {
+    if (products.length === 0) {
+      grid.innerHTML = `<div class="empty-state">No products found.</div>`;
+      return;
+    }
+    grid.innerHTML = products
+      .map(
+        (p) => `
+      <a href="product.html?id=${p.id}" class="product-card">
+        <img src="${p.image_url || "https://via.placeholder.com/300x200?text=No+Image"}" alt="${escapeHtml(p.name)}" />
+        <div class="product-card-body">
+          <span class="category-tag">${escapeHtml(p.category || "")}</span>
+          <h3>${escapeHtml(p.name)}</h3>
+          <span class="price">$${p.price.toFixed(2)}</span>
+          <span class="stock-note ${p.stock === 0 ? "low" : ""}">
+            ${p.stock === 0 ? "Out of stock" : p.stock < 5 ? `Only ${p.stock} left` : "In stock"}
+          </span>
+        </div>
+      </a>
+    `
+      )
+      .join("");
+  }
+
+  async function loadCategories() {
+    try {
+      const categories = await api.get("/products/categories");
+      categoryFilter.innerHTML =
+        `<option value="">All Categories</option>` +
+        categories.map((c) => `<option value="${c}">${c}</option>`).join("");
+    } catch (err) {
+      // Non-critical if this fails
+    }
+  }
+
+  async function loadProducts() {
+    const params = new URLSearchParams();
+    if (categoryFilter.value) params.set("category", categoryFilter.value);
+    if (searchInput.value.trim()) params.set("search", searchInput.value.trim());
+
+    try {
+      const products = await api.get(`/products?${params.toString()}`);
+      alertBox.innerHTML = "";
+      renderProducts(products);
+    } catch (err) {
+      showAlert(err.message);
+    }
+  }
+
+  categoryFilter.addEventListener("change", loadProducts);
+  searchForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadProducts();
+  });
+
+  loadCategories();
+  loadProducts();
+</script>
+</body>
+</html>

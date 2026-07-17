@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Confirmed — ShopEase</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">🛒 ShopEase</a>
+    <div class="nav-links">
+      <a href="cart.html">Cart <span class="cart-badge" id="cart-count"></span></a>
+      <div id="auth-links" class="nav-links"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="page container">
+  <div class="form-card" style="text-align:center;">
+    <h2>✅ Order Placed!</h2>
+    <p id="order-msg" style="margin: 16px 0; color: var(--text-light);"></p>
+    <a href="orders.html" class="btn">View My Orders</a>
+    <br /><br />
+    <a href="index.html">Continue Shopping</a>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const orderId = new URLSearchParams(window.location.search).get("orderId");
+  document.getElementById("order-msg").textContent = orderId
+    ? `Your order #${orderId} has been placed successfully. You'll find it in your order history.`
+    : "Your order has been placed successfully.";
+</script>
+</body>
+</html>
