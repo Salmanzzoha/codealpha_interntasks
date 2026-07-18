@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — Buzz</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="inner">
+    <a href="index.html" class="brand">🐝 Buzz</a>
+    <div class="nav-links" id="auth-links"></div>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="form-card">
+    <h2>Login</h2>
+    <div id="alert-box"></div>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="emailOrUsername">Email or Username</label>
+        <input type="text" id="emailOrUsername" required />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" required />
+      </div>
+      <button type="submit">Login</button>
+    </form>
+    <div class="form-footer">
+      Don't have an account? <a href="register.html">Register</a>
+    </div>
+    <p style="font-size:0.78rem; color:var(--text-light); text-align:center; margin-top:14px;">
+      Demo accounts (if seeded): ayesha / rafiq / nadia — password: password123
+    </p>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emailOrUsername = document.getElementById("emailOrUsername").value.trim();
+    const password = document.getElementById("password").value;
+    try {
+      await api.post("/auth/login", { emailOrUsername, password });
+      window.location.href = "index.html";
+    } catch (err) {
+      alertBox.innerHTML = `<div class="alert error">${err.message}</div>`;
+    }
+  });
+</script>
+</body>
+</html>

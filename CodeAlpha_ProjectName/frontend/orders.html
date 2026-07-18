@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Orders — ShopEase</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">🛒 ShopEase</a>
+    <div class="nav-links">
+      <a href="cart.html">Cart <span class="cart-badge" id="cart-count"></span></a>
+      <div id="auth-links" class="nav-links"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="page container">
+  <h1 class="page-title">My Orders</h1>
+  <div id="alert-box"></div>
+  <div id="orders-container"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  const container = document.getElementById("orders-container");
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  async function loadOrders() {
+    try {
+      const orders = await api.get("/orders");
+      if (orders.length === 0) {
+        container.innerHTML = `<div class="empty-state">No orders yet. <a href="index.html">Start shopping</a>.</div>`;
+        return;
+      }
+
+      container.innerHTML = orders
+        .map(
+          (order) => `
+        <div class="order-card">
+          <div class="order-card-header">
+            <div>
+              <strong>Order #${order.id}</strong> —
+              <span style="color:var(--text-light); font-size:0.85rem;">${new Date(order.created_at).toLocaleString()}</span>
+            </div>
+            <span class="status-badge">${order.status}</span>
+          </div>
+          <div style="font-size:0.9rem; color:var(--text-light); margin-bottom:6px;">
+            Shipping to: ${escapeHtml(order.shipping_address)}
+          </div>
+          ${order.items
+            .map(
+              (item) => `
+            <div class="order-item-row">
+              <img src="${item.image_url || "https://via.placeholder.com/44"}" alt="${escapeHtml(item.name)}" />
+              <span style="flex:1;">${escapeHtml(item.name)} × ${item.quantity}</span>
+              <span>$${(item.price_at_purchase * item.quantity).toFixed(2)}</span>
+            </div>
+          `
+            )
+            .join("")}
+          <div style="text-align:right; font-weight:700; margin-top:10px;">
+            Total: $${order.total.toFixed(2)}
+          </div>
+        </div>
+      `
+        )
+        .join("");
+    } catch (err) {
+      if (err.message.includes("logged in")) {
+        window.location.href = "login.html";
+        return;
+      }
+      showAlert(err.message);
+    }
+  }
+
+  loadOrders();
+</script>
+</body>
+</html>

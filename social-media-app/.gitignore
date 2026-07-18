@@ -1,0 +1,7 @@
+node_modules/
+backend/db/social.db
+backend/db/social.db-shm
+backend/db/social.db-wal
+.env
+*.log
+.DS_Store

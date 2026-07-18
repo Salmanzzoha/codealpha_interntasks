@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Checkout — ShopEase</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="brand">🛒 ShopEase</a>
+    <div class="nav-links">
+      <a href="cart.html">Cart <span class="cart-badge" id="cart-count"></span></a>
+      <div id="auth-links" class="nav-links"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="page container">
+  <div class="form-card">
+    <h2>Checkout</h2>
+    <div id="alert-box"></div>
+    <div id="summary"></div>
+    <form id="checkout-form">
+      <div class="form-group">
+        <label for="address">Shipping Address</label>
+        <textarea id="address" rows="3" required placeholder="Street, City, ZIP"></textarea>
+      </div>
+      <button type="submit">Place Order</button>
+    </form>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/nav.js"></script>
+<script>
+  const alertBox = document.getElementById("alert-box");
+  const summary = document.getElementById("summary");
+  const form = document.getElementById("checkout-form");
+
+  function showAlert(message, type = "error") {
+    alertBox.innerHTML = `<div class="alert ${type}">${message}</div>`;
+  }
+
+  async function loadSummary() {
+    try {
+      const cart = await api.get("/cart");
+      if (cart.items.length === 0) {
+        summary.innerHTML = `<p>Your cart is empty. <a href="index.html">Go shopping</a>.</p>`;
+        form.style.display = "none";
+        return;
+      }
+      summary.innerHTML = `<p style="margin-bottom:16px;">${cart.items.length} item(s) — Total: <strong>$${cart.total.toFixed(2)}</strong></p>`;
+    } catch (err) {
+      if (err.message.includes("logged in")) {
+        window.location.href = "login.html";
+        return;
+      }
+      showAlert(err.message);
+    }
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const shippingAddress = document.getElementById("address").value.trim();
+    try {
+      const result = await api.post("/orders", { shippingAddress });
+      updateCartBadge();
+      window.location.href = `order-confirmation.html?orderId=${result.orderId}`;
+    } catch (err) {
+      showAlert(err.message);
+    }
+  });
+
+  loadSummary();
+</script>
+</body>
+</html>
